@@ -3,18 +3,23 @@
 //   "npm start exercise.eslint.1"
 //   to move on to the next exercise
 
+const disallowedMethods = ['log', 'info', 'warn']
+
 module.exports = {
-  meta: {
-    type: 'problem',
-    docs: {
-      description: 'no-console',
-    },
-  },
+  // you're going to need context :)
   create(context) {
     return {
-      Identifier(node) {
-        const isConsole = node.name === 'console'
-        if (!isConsole) {
+      MemberExpression(node) {
+        const isConsoleStatement = looksLike(node, {
+          object: {
+            name: 'console',
+          },
+          property: val => !disallowedMethods.includes(val),
+          parent: {
+            type: 'CallExpression',
+          },
+        })
+        if (!isConsoleStatement) {
           return
         }
 
@@ -25,4 +30,23 @@ module.exports = {
       },
     }
   },
+}
+
+function looksLike(a, b) {
+  return (
+    a &&
+    b &&
+    Object.keys(b).every(bKey => {
+      const bVal = b[bKey]
+      const aVal = a[bKey]
+      if (typeof bVal === 'function') {
+        return bVal(aVal)
+      }
+      return isPrimitive(bVal) ? bVal === aVal : looksLike(aVal, bVal)
+    })
+  )
+}
+
+function isPrimitive(val) {
+  return val == null || /^[sbn]/.test(typeof val)
 }
